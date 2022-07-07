@@ -420,6 +420,7 @@ private:
     std::vector <int>    MuTkIso;
     std::vector <int>    MuMiniIso;
     std::vector <int>    MuMultiIso;
+    std::vector <int>    MuTrackerLayersWithMeasurement;
 
     // MET
     double Met;
@@ -786,6 +787,7 @@ void TauGenMCanalyzer::beginJob() {
     tree->Branch("MuTkIso", &MuTkIso);
     tree->Branch("MuMiniIso", &MuMiniIso);
     tree->Branch("MuMultiIso", &MuMultiIso);
+    tree->Branch("MuTrackerLayersWithMeasurement", &MuTrackerLayersWithMeasurement);
     // MET
     tree->Branch("Met", &Met, "Met/D");
     //tree->Branch("Met_phi", &Met_phi, "Met_phi/D");
@@ -904,13 +906,13 @@ void TauGenMCanalyzer::FindGenTau(const edm::Event& event) {
                 if (abs(p->pdgId()) == abs((&particle)->pdgId())) {
                     continue;
                 } else {
-                    genTauTrueMother.push_back(p->pdgId());
+                    genTauMother.push_back(p->pdgId());
                     genTauMotherFound = true;
                     break;
                 } 
             }
             if (!genTauMotherFound) {
-                genTauTrueMother.push_back(-10);
+                genTauMother.push_back(-10);
             }
             genTauFromW.push_back(GenTauParticleFromW);
             genTauFromWFromt.push_back(GenTauParticleFromWFromt);
@@ -1137,7 +1139,7 @@ int TauGenMCanalyzer::AddTaus(const edm::Event& event) {
             if (TauVsEleDeepID < 4) continue;
             if (tau.pt() < tauPtMin) continue;
             if (abs(tau.eta()) > tauEtaMax) continue;
-            if (!tau.leadChargedHadrCand()) continue;
+            //if (!tau.leadChargedHadrCand()) continue;
             if ((pv_position - tau.vertex()).R() > tauDzMax) continue;
 
             TauPt.push_back(tau.pt());
@@ -1166,20 +1168,34 @@ int TauGenMCanalyzer::AddTaus(const edm::Event& event) {
             TauDeepTau2017v2p1VSmuWP.push_back(TauVsMuDeepID);
             TauDeepTau2017v2p1VSeWP.push_back(TauVsEleDeepID);
 
-            PiCharPt.push_back(tau.leadChargedHadrCand()->pt());
-            PiCharEta.push_back(tau.leadChargedHadrCand()->eta());
-            PiCharPhi.push_back(tau.leadChargedHadrCand()->phi());
-            PiCharQ.push_back(tau.leadChargedHadrCand()->charge());
-            PiCharMass.push_back(tau.leadChargedHadrCand()->mass());
+            if (tau.leadChargedHadrCand().isNonnull()) {
+                PiCharPt.push_back(tau.leadChargedHadrCand()->pt());
+                PiCharEta.push_back(tau.leadChargedHadrCand()->eta());
+                PiCharPhi.push_back(tau.leadChargedHadrCand()->phi());
+                PiCharQ.push_back(tau.leadChargedHadrCand()->charge());
+                PiCharMass.push_back(tau.leadChargedHadrCand()->mass());
+            } else {
+                PiCharPt.push_back(-10);
+                PiCharEta.push_back(-10);
+                PiCharPhi.push_back(-10);
+                PiCharQ.push_back(-10);
+                PiCharMass.push_back(-10);
+            }
 
             math::XYZTLorentzVector tau_p4 = tau.p4();
-            math::XYZTLorentzVector piChar_p4 = tau.leadChargedHadrCand()->p4();
-            math::XYZTLorentzVector piZero_p4 = tau_p4 - piChar_p4;
-
-            PiZeroPt.push_back(piZero_p4.pt());
-            PiZeroEta.push_back(piZero_p4.eta());
-            PiZeroPhi.push_back(piZero_p4.phi());
-            PiZeroMass.push_back(piZero_p4.M());
+            if (tau.leadChargedHadrCand().isNonnull()) {
+                math::XYZTLorentzVector piChar_p4 = tau.leadChargedHadrCand()->p4();
+                math::XYZTLorentzVector piZero_p4 = tau_p4 - piChar_p4;
+                PiZeroPt.push_back(piZero_p4.pt());
+                PiZeroEta.push_back(piZero_p4.eta());
+                PiZeroPhi.push_back(piZero_p4.phi());
+                PiZeroMass.push_back(piZero_p4.M());
+            } else {
+                PiZeroPt.push_back(-10);
+                PiZeroEta.push_back(-10);
+                PiZeroPhi.push_back(-10);
+                PiZeroMass.push_back(-10);
+            }
         }
     }
     return TauPt.size();
@@ -1309,6 +1325,7 @@ int TauGenMCanalyzer::AddLeptons(const edm::Event& event) {
             MuTkIso.push_back(muonTkIso);
             MuMiniIso.push_back(muonMiniIso);
             MuMultiIso.push_back(muonMultiIso);
+            MuTrackerLayersWithMeasurement.push_back(muon.innerTrack()->hitPattern().trackerLayersWithMeasurement());
         }
     }
     return (ElePt.size() + MuPt.size());
@@ -1686,6 +1703,7 @@ void TauGenMCanalyzer::ClearVectors () {
     MuTkIso.clear();
     MuMiniIso.clear();
     MuMultiIso.clear();
+    MuTrackerLayersWithMeasurement.clear();
     // Jets
     JetPt.clear();
     JetEta.clear();
